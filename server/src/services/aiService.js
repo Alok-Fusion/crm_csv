@@ -37,6 +37,11 @@ ${CRM_FIELDS.map(f => `- ${f}`).join('\n')}
 
 2. **crm_status**: ONLY use one of these exact values:
    ${ALLOWED_CRM_STATUSES.map(s => `- ${s}`).join('\n   ')}
+   Map common status terms intelligently:
+   - "Hot Lead", "Warm Lead", "New Lead", "Qualified", "Interested" → GOOD_LEAD_FOLLOW_UP
+   - "Cold Lead", "No response", "Did not pick up", "Busy" → DID_NOT_CONNECT
+   - "Lost", "Not Interested", "Junk", "Unsubscribed" → BAD_LEAD
+   - "Converted", "Won", "Paid", "Sale Completed", "Sale Done" → SALE_DONE
    If the data doesn't clearly match any status, leave it as an empty string.
 
 3. **data_source**: ONLY use one of these exact values:
