@@ -33,7 +33,7 @@ The system is built as a highly decoupled Monorepo divided into a presentation/c
 ```mermaid
 graph TD
     %% Client Layer
-    subgraph Client Layer (Next.js 15 App)
+    subgraph ClientLayer ["Client Layer (Next.js 15 App)"]
         SPA[Single Page Dashboard Router]
         View1[Dashboard Analytics]
         View2[Importer Wizard]
@@ -44,7 +44,7 @@ graph TD
     end
 
     %% Server Layer
-    subgraph Server Layer (Express API Node.js)
+    subgraph ServerLayer ["Server Layer (Express API Node.js)"]
         API[API Endpoints Routing Layer]
         Parser[csv-parse Stream engine]
         AI[LLM Adapter API Adapter]
