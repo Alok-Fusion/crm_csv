@@ -31,41 +31,66 @@ Equipped with a dual-theme analytical dashboard, persistent history logs, custom
 The system is built as a highly decoupled Monorepo divided into a presentation/client layer and a stateless-oriented server API layer.
 
 ```mermaid
-graph TD
-    %% Client Layer
-    subgraph ClientLayer ["Client Layer (Next.js 15 App)"]
-        SPA[Single Page Dashboard Router]
-        View1[Dashboard Analytics]
-        View2[Importer Wizard]
-        View3[History Viewer]
-        View4[Settings Panel]
-        Theme[Theme Toggle Engine]
-        Batcher[Frontend Sequential Batcher & Retry Loop]
-    end
+flowchart TB
 
-    %% Server Layer
-    subgraph ServerLayer ["Server Layer (Express API Node.js)"]
-        API[API Endpoints Routing Layer]
-        Parser[csv-parse Stream engine]
-        AI[LLM Adapter API Adapter]
-        DB[Local db.json file-based store]
-    end
+%% Client
+subgraph Client["Client (Next.js 15)"]
 
-    %% Flow connections
-    SPA --> View1 & View2 & View3 & View4
-    Theme -->|Sets data-theme="light/dark"| SPA
-    View2 -->|Step 1: Upload Raw CSV| Parser
-    Parser -->|Step 2: Return CSV Preview Headers/Rows| View2
-    View2 -->|Step 3: Sequential processing requests| Batcher
-    Batcher -->|Step 4: POST /api/process| API
-    API -->|Step 5: Run Batch validation & sanitization| API
-    API -->|Step 6: Map to system prompts| AI
-    AI -->|Get results| API
-    API -->|Step 7: Persist import statistics & records| DB
-    API -->|Step 8: Mapped CRM results payload| Batcher
-    Batcher -->|Step 9: Accumulate and render results| View2
-    View3 -->|Query list/details| DB
-    View1 -->|Load chart aggregates| DB
+UI["Dashboard UI"]
+
+Importer["CSV Importer"]
+
+History["History"]
+
+Settings["Settings"]
+
+Theme["Theme Toggle"]
+
+Batch["Batch Processor"]
+
+end
+
+%% Backend
+subgraph Backend["Express API"]
+
+Upload["Upload API"]
+
+Process["Process API"]
+
+Logs["History API"]
+
+Parser["CSV Parser"]
+
+Validator["Record Validator"]
+
+Mapper["CRM Mapper"]
+
+LLM["Gemini / OpenAI / Claude"]
+
+DB["db.json"]
+
+end
+
+UI --> Importer
+UI --> History
+UI --> Settings
+Theme --> UI
+
+Importer --> Upload
+Upload --> Parser
+Parser --> Importer
+
+Importer --> Batch
+Batch --> Process
+
+Process --> Validator
+Validator --> Mapper
+Mapper --> LLM
+LLM --> Mapper
+Mapper --> DB
+
+History --> Logs
+Logs --> DB
 ```
 
 ### Dataflow & Import Job Lifecycle
