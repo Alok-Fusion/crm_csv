@@ -68,7 +68,7 @@ To align with the stateless preference of the project, a lightweight, file-based
 3. For each batch request to `/api/process`:
    - The server validates the rows (skipping records containing neither email nor mobile).
    - The server builds the mapping system prompt containing strict CRM fields (`crm_status`, `data_source` validation parameters).
-   - The payload is dispatched to the active provider (Gemini 2.0 Flash, OpenAI GPT-4o-mini, or Anthropic Claude 3.5 Sonnet) using raw HTTPS requests (no SDK overhead).
+   - The payload is dispatched to the active provider (Gemini 2.0 Flash, OpenAI GPT-4o-mini, Anthropic Claude 3.5 Sonnet, or Groq LLaMA 3.3) using raw HTTPS requests (no SDK overhead).
 4. If a batch fails (due to rate limits, network timeouts, or model crashes), the frontend catches the error and triggers up to 3 retries, delaying subsequent attempts.
 
 #### Phase 3: DB Log Persistence & Analytical Updates

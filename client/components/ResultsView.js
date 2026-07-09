@@ -92,6 +92,8 @@ export default function ResultsView({ results }) {
               ? 'GPT'
               : provider === 'anthropic'
               ? 'Claude'
+              : provider === 'groq'
+              ? 'Groq'
               : provider}
           </div>
           <div className="stat-label">AI Provider</div>

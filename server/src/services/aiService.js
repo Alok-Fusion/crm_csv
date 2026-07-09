@@ -4,16 +4,23 @@ const { ALLOWED_CRM_STATUSES, ALLOWED_DATA_SOURCES, CRM_FIELDS } = require('../u
 
 // ─── LLM Provider Detection ──────────────────────────────────────────────────
 
-function detectProvider(customApiKey) {
+function detectProvider(customApiKey, preferredProvider) {
   if (customApiKey) {
     const trimmed = customApiKey.trim();
     if (trimmed.startsWith('AIzaSy')) return 'gemini';
     if (trimmed.startsWith('sk-ant')) return 'anthropic';
     if (trimmed.startsWith('sk-')) return 'openai';
   }
+  
+  if (preferredProvider === 'gemini' && process.env.GEMINI_API_KEY) return 'gemini';
+  if (preferredProvider === 'openai' && process.env.OPENAI_API_KEY) return 'openai';
+  if (preferredProvider === 'anthropic' && process.env.ANTHROPIC_API_KEY) return 'anthropic';
+  if (preferredProvider === 'groq' && process.env.GROQ_API_KEY) return 'groq';
+
   if (process.env.GEMINI_API_KEY) return 'gemini';
   if (process.env.OPENAI_API_KEY) return 'openai';
   if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
+  if (process.env.GROQ_API_KEY) return 'groq';
   return null;
 }
 
@@ -158,6 +165,37 @@ function callAnthropic(records, customApiKey) {
   });
 }
 
+function callGroq(records, customApiKey) {
+  const apiKey = customApiKey || process.env.GROQ_API_KEY;
+  const model = 'llama-3.3-70b-versatile';
+
+  const body = JSON.stringify({
+    model: model,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'user', content: `Process these CSV records into CRM format:\n${JSON.stringify(records, null, 2)}` }
+    ],
+    temperature: 0.1,
+    response_format: { type: 'json_object' },
+  });
+
+  return makeRequest({
+    hostname: 'api.groq.com',
+    path: '/openai/v1/chat/completions',
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+  }, body).then(data => {
+    const text = data.choices?.[0]?.message?.content;
+    if (!text) throw new Error('Empty response from Groq');
+    const parsed = parseJSONResponse(text);
+    if (parsed && !Array.isArray(parsed) && parsed.records) return parsed.records;
+    return parsed;
+  });
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function makeRequest(options, body) {
@@ -226,24 +264,30 @@ function parseJSONResponse(text) {
 const BATCH_SIZE = 15;
 const MAX_RETRIES = 3;
 
-async function processRecordsWithAI(records, customApiKey, onProgress) {
-  // If third argument is a function, maybe onProgress was passed as second argument
+async function processRecordsWithAI(records, customApiKey, preferredProvider, onProgress) {
   let actualApiKey = customApiKey;
+  let actualProvider = preferredProvider;
   let actualOnProgress = onProgress;
+  
   if (typeof customApiKey === 'function') {
     actualOnProgress = customApiKey;
     actualApiKey = null;
+    actualProvider = null;
+  } else if (typeof preferredProvider === 'function') {
+    actualOnProgress = preferredProvider;
+    actualProvider = null;
   }
 
-  const provider = detectProvider(actualApiKey);
+  const provider = detectProvider(actualApiKey, actualProvider);
   if (!provider) {
-    throw new Error('No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in your .env file, or enter an API key in the UI.');
+    throw new Error('No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY in your .env file.');
   }
 
   const callLLM = {
     gemini: (recs) => callGemini(recs, actualApiKey),
     openai: (recs) => callOpenAI(recs, actualApiKey),
     anthropic: (recs) => callAnthropic(recs, actualApiKey),
+    groq: (recs) => callGroq(recs, actualApiKey),
   }[provider];
 
   // Split into batches

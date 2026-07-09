@@ -43,16 +43,23 @@ async function processCSV(req, res, next) {
       return res.status(400).json({ error: 'No records provided for processing.' });
     }
 
-    const provider = detectProvider();
+    const settings = db.getSettings();
+    const configModel = settings?.defaultModel || 'gemini-2.0-flash';
+    let preferredProvider = 'gemini';
+    if (configModel.includes('gpt') || configModel.includes('openai')) preferredProvider = 'openai';
+    else if (configModel.includes('claude') || configModel.includes('sonnet')) preferredProvider = 'anthropic';
+    else if (configModel.includes('llama') || configModel.includes('groq')) preferredProvider = 'groq';
+
+    const provider = detectProvider(null, preferredProvider);
     if (!provider) {
       return res.status(500).json({
-        error: 'No LLM API key configured on the server. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in the server\'s .env file.',
+        error: 'No LLM API key configured on the server. Please check GEMINI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY in the server\'s .env file.',
       });
     }
 
     console.log(`[AI] Processing ${records.length} records using ${provider.toUpperCase()}...`);
 
-    const result = await processRecordsWithAI(records, null, (progress) => {
+    const result = await processRecordsWithAI(records, null, preferredProvider, (progress) => {
       console.log(`[AI] Progress: Batch ${progress.processedBatches}/${progress.totalBatches} (${progress.processedRecords}/${progress.totalRecords} records)`);
     });
 

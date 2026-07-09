@@ -3,7 +3,7 @@
 [![Express API](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![Next.js Frontend](https://img.shields.io/badge/Next.js%2015-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
 [![Docker Compose](https://img.shields.io/badge/Docker%20Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![LLM Models Supported](https://img.shields.io/badge/AI--Powered-Gemini%20%7C%20OpenAI%20%7C%20Claude-blueviolet?style=for-the-badge)](https://ai.google.dev/)
+[![LLM Models Supported](https://img.shields.io/badge/AI--Powered-Gemini%20%7C%20OpenAI%20%7C%20Claude%20%7C%20Groq-blueviolet?style=for-the-badge)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 
 An intelligent, AI-powered CSV importer that parses, sanitizes, and maps campaign lead sheets of **any layout, column structure, or header configuration** into the strict **GrowEasy CRM format**. 
@@ -108,7 +108,7 @@ The system processes spreadsheets through three distinct phases:
 - The client retrieves the batch size (e.g. 15) and LLM default model configured on the server settings.
 - The client slices the rows array into batches. It initiates a sequential promise loop to process batches sequentially.
 - If a batch fails, the client triggers the **Retry Engine** (handling up to 3 attempts per batch with exponential delay (1s, 2s, 3s)), keeping track of real-time progress.
-- The backend receives each chunk, checks credentials, constructs the detailed CRM System Prompt, transmits it to the LLM (Gemini, OpenAI, or Claude), parses JSON back, maps calling codes, classifies statuses and data sources, validates records (removes invalid rows), and logs data.
+- The backend receives each chunk, checks credentials, constructs the detailed CRM System Prompt, transmits it to the LLM (Gemini, OpenAI, Claude, or Groq), parses JSON back, maps calling codes, classifies statuses and data sources, validates records (removes invalid rows), and logs data.
 
 #### 3. Log Persistence & Analytics Sync Flow
 - After processing each chunk successfully, the backend saves the details of the import (filename, date, counts, mapped list, skipped list) to `server/data/db.json` via a local synchronous write.
@@ -124,7 +124,7 @@ For a comprehensive breakdown of the data lifecycle, prompt structures, and API 
 - **Intuitive CSV Previewer**: Drag & Drop zone or file picker parsing CSVs in memory instantly without processing by AI. Includes searchable sticky-header scrollable tables.
 - **Sequential Batch Processing**: Splices records into configurable batch sizes and processes sequentially, providing real progress meters to prevent model token rate exhaustion.
 - **Frontend Retry Engine**: Automatically retries failed batches up to 3 times on network hiccups or rate limits using exponential backoff before asking the user.
-- **Multi-LLM Dynamic Routing**: Connects to Gemini 2.0 Flash, OpenAI GPT-4o-mini, or Anthropic Claude 3.5 Sonnet directly via server configurations.
+- **Multi-LLM Dynamic Routing**: Connects to Gemini 2.0 Flash, OpenAI GPT-4o-mini, Anthropic Claude 3.5 Sonnet, or Groq LLaMA 3.3 directly via server configurations.
 - **Local JSON Database**: Persists import histories, settings, and analytical summaries to a lightweight JSON database file (`server/data/db.json`).
 - **Dashboard Analytics View**: Renders circular success gauges, Lead Status bar graphs, and Lead Source charts dynamically using custom, animated SVG indicators.
 - **Historical Log Inspection**: Expand past imports to inspect record tables or re-download the mapped CRM CSV file instantly.

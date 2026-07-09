@@ -61,6 +61,8 @@ export default function ProcessingStatus({ progress, provider }) {
                 ? 'OpenAI GPT'
                 : provider === 'anthropic'
                 ? 'Anthropic Claude'
+                : provider === 'groq'
+                ? 'Groq LLaMA'
                 : provider}
             </span>
           </div>

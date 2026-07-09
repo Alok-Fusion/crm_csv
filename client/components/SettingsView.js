@@ -50,12 +50,12 @@ export default function SettingsView({ onClearHistory }) {
     <div className="step-content">
       <div className="dashboard-title-section">
         <h2 className="dashboard-title">System Settings</h2>
-        <p className="dashboard-subtitle">Configure AI model defaults and database management</p>
+        <p className="dashboard-subtitle">Configure operational defaults and database management</p>
       </div>
 
       <div className="card">
         <div className="card-header">
-          <h3 className="card-title">AI Processing Configuration</h3>
+          <h3 className="card-title">Processing Configuration</h3>
         </div>
 
         {successMsg && (
@@ -72,24 +72,6 @@ export default function SettingsView({ onClearHistory }) {
 
         <form onSubmit={handleSave}>
           <div className="form-group">
-            <label className="form-label" htmlFor="model-select">Default AI Extraction Model</label>
-            <select
-              id="model-select"
-              className="form-control"
-              value={model}
-              onChange={(e) => setModel(e.target.value)}
-              disabled={loading}
-            >
-              <option value="gemini-2.0-flash">Google Gemini 2.0 Flash (Recommended)</option>
-              <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
-              <option value="claude-sonnet-4-20250514">Anthropic Claude 3.5 Sonnet</option>
-            </select>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              Note: Ensure the matching API key is configured in the server's .env file.
-            </span>
-          </div>
-
-          <div className="form-group" style={{ marginTop: '16px' }}>
             <label className="form-label" htmlFor="batch-select">AI Processing Batch Size</label>
             <select
               id="batch-select"
