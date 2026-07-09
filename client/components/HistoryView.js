@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 const CRM_COLUMNS = [
   'created_at',
@@ -71,6 +71,8 @@ export default function HistoryView({ history, onClear }) {
     URL.revokeObjectURL(url);
   };
 
+  const circumference = 2 * Math.PI * 45;
+
   return (
     <div className="step-content">
       <div className="dashboard-title-section" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -94,6 +96,52 @@ export default function HistoryView({ history, onClear }) {
           {history.map((item) => {
             const isExpanded = expandedId === item.id;
             const displayData = activeTab === 'parsed' ? item.parsed || [] : item.skipped || [];
+
+            // Calculate file-specific distributions
+            const parsedRecords = item.parsed || [];
+            const totalProcessed = (item.totalImported || 0) + (item.totalSkipped || 0);
+            const successRate = totalProcessed > 0 ? Math.round(((item.totalImported || 0) / totalProcessed) * 100) : 0;
+
+            // Status distribution for this file
+            const statusCounts = {
+              GOOD_LEAD_FOLLOW_UP: 0,
+              DID_NOT_CONNECT: 0,
+              BAD_LEAD: 0,
+              SALE_DONE: 0,
+            };
+            parsedRecords.forEach((rec) => {
+              if (rec.crm_status && statusCounts[rec.crm_status] !== undefined) {
+                statusCounts[rec.crm_status]++;
+              }
+            });
+            const statusTotal = Object.values(statusCounts).reduce((a, b) => a + b, 0);
+            const fileStatusDist = Object.entries(statusCounts).map(([status, val]) => ({
+              name: status.replace(/_/g, ' '),
+              value: val,
+              percentage: statusTotal > 0 ? Math.round((val / statusTotal) * 100) : 0,
+            }));
+
+            // Source distribution for this file
+            const sourceCounts = {
+              leads_on_demand: 0,
+              meridian_tower: 0,
+              eden_park: 0,
+              varah_swamy: 0,
+              sarjapur_plots: 0,
+            };
+            parsedRecords.forEach((rec) => {
+              if (rec.data_source && sourceCounts[rec.data_source] !== undefined) {
+                sourceCounts[rec.data_source]++;
+              }
+            });
+            const sourceTotal = Object.values(sourceCounts).reduce((a, b) => a + b, 0);
+            const fileSourceDist = Object.entries(sourceCounts).map(([source, val]) => ({
+              name: source.replace(/_/g, ' '),
+              value: val,
+              percentage: sourceTotal > 0 ? Math.round((val / sourceTotal) * 100) : 0,
+            }));
+
+            const strokeDashoffset = circumference - (successRate / 100) * circumference;
 
             return (
               <div key={item.id} className="history-item">
@@ -122,6 +170,69 @@ export default function HistoryView({ history, onClear }) {
                 {/* Body Details */}
                 {isExpanded && (
                   <div className="history-item-body">
+                    {/* File Dashboard Summary */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px', marginBottom: '24px', borderBottom: '1px solid var(--border-light)', paddingBottom: '20px' }}>
+                      {/* Left: Distributions */}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div>
+                          <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>Lead Status Distribution</h5>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {fileStatusDist.map((dist) => (
+                              <div key={dist.name} className="bar-chart-row">
+                                <span className="bar-chart-label" style={{ width: '120px', fontSize: '0.7rem' }}>{dist.name}</span>
+                                <div className="bar-chart-track" style={{ height: '3px' }}>
+                                  <div
+                                    className={`bar-chart-fill ${dist.name === 'SALE DONE' ? 'success' : dist.name === 'BAD LEAD' ? 'error' : dist.name === 'DID NOT CONNECT' ? 'warning' : 'info'}`}
+                                    style={{ width: `${dist.percentage}%` }}
+                                  />
+                                </div>
+                                <span className="bar-chart-value" style={{ fontSize: '0.7rem' }}>{dist.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <h5 style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', marginBottom: '8px', fontWeight: 600 }}>Data Source Distribution</h5>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {fileSourceDist.map((dist) => (
+                              <div key={dist.name} className="bar-chart-row">
+                                <span className="bar-chart-label" style={{ width: '120px', fontSize: '0.7rem' }}>{dist.name}</span>
+                                <div className="bar-chart-track" style={{ height: '3px' }}>
+                                  <div
+                                    className="bar-chart-fill"
+                                    style={{ width: `${dist.percentage}%`, backgroundColor: 'var(--text-primary)' }}
+                                  />
+                                </div>
+                                <span className="bar-chart-value" style={{ fontSize: '0.7rem' }}>{dist.value}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Circular Gauge */}
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', padding: '16px', border: '1px solid var(--border-light)' }}>
+                        <div style={{ position: 'relative', width: '80px', height: '80px', marginBottom: '12px' }}>
+                          <svg width="80" height="80" viewBox="0 0 100 100">
+                            <circle className="gauge-circle-bg" cx="50" cy="50" r="45" style={{ strokeWidth: 8 }} />
+                            <circle
+                              className="gauge-circle-fill"
+                              cx="50"
+                              cy="50"
+                              r="45"
+                              strokeDasharray={circumference}
+                              strokeDashoffset={strokeDashoffset}
+                              style={{ stroke: 'var(--success)', strokeWidth: 8 }}
+                            />
+                          </svg>
+                          <div className="gauge-percentage" style={{ fontSize: '0.95rem' }}>{successRate}%</div>
+                        </div>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-primary)' }}>Import Yield Rate</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: '2px' }}>{item.totalImported} of {totalProcessed} leads successfully parsed</div>
+                      </div>
+                    </div>
+
                     <div
                       style={{
                         display: 'flex',
