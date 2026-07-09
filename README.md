@@ -25,20 +25,70 @@ Equipped with a dual-theme analytical dashboard, persistent history logs, custom
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture & Dataflow
+
+### High-Level Architecture Diagram
+The system is built as a highly decoupled Monorepo divided into a presentation/client layer and a stateless-oriented server API layer.
 
 ```mermaid
 graph TD
-    A[Next.js SPA Client] -->|1. Upload File| B[Express API Server]
-    B -->|2. Buffer Parse| C[csv-parse Engine]
-    C -->|3. Columns & Rows| A
-    A -->|4. Trigger Import Job| B
-    B -->|5. Chunked Batches| D[AI Multi-LLM Adapter]
-    D -->|6. Map CRM Fields| B
-    B -->|7. Persist Metadata| E[Local db.json database]
-    B -->|8. Structured Mapped JSON| A
-    A -->|9. Render Analytics| A
+    %% Client Layer
+    subgraph Client Layer (Next.js 15 App)
+        SPA[Single Page Dashboard Router]
+        View1[Dashboard Analytics]
+        View2[Importer Wizard]
+        View3[History Viewer]
+        View4[Settings Panel]
+        Theme[Theme Toggle Engine]
+        Batcher[Frontend Sequential Batcher & Retry Loop]
+    end
+
+    %% Server Layer
+    subgraph Server Layer (Express API Node.js)
+        API[API Endpoints Routing Layer]
+        Parser[csv-parse Stream engine]
+        AI[LLM Adapter API Adapter]
+        DB[Local db.json file-based store]
+    end
+
+    %% Flow connections
+    SPA --> View1 & View2 & View3 & View4
+    Theme -->|Sets data-theme="light/dark"| SPA
+    View2 -->|Step 1: Upload Raw CSV| Parser
+    Parser -->|Step 2: Return CSV Preview Headers/Rows| View2
+    View2 -->|Step 3: Sequential processing requests| Batcher
+    Batcher -->|Step 4: POST /api/process| API
+    API -->|Step 5: Run Batch validation & sanitization| API
+    API -->|Step 6: Map to system prompts| AI
+    AI -->|Get results| API
+    API -->|Step 7: Persist import statistics & records| DB
+    API -->|Step 8: Mapped CRM results payload| Batcher
+    Batcher -->|Step 9: Accumulate and render results| View2
+    View3 -->|Query list/details| DB
+    View1 -->|Load chart aggregates| DB
 ```
+
+### Dataflow & Import Job Lifecycle
+
+The system processes spreadsheets through three distinct phases:
+
+#### 1. In-Memory Upload & Local Preview Flow
+- The user selects a CSV file (via drag & drop or file selector).
+- The client reads it and forwards a single `multipart/form-data` request containing the binary stream to `/api/upload`.
+- The backend parses the buffer instantly using `csv-parse`, auto-detecting delimiters, stripping byte order marks (BOM), trimming column spaces, and normalising rows.
+- The parsed rows (restricted to the first 100 on the UI to ensure performance on huge files) and column names are returned to the client to render the interactive preview table.
+
+#### 2. Client-Controlled AI Mapping & Retry Flow
+- The user clicks **Process & Import**.
+- The client retrieves the batch size (e.g. 15) and LLM default model configured on the server settings.
+- The client slices the rows array into batches. It initiates a sequential promise loop to process batches sequentially.
+- If a batch fails, the client triggers the **Retry Engine** (handling up to 3 attempts per batch with exponential delay (1s, 2s, 3s)), keeping track of real-time progress.
+- The backend receives each chunk, checks credentials, constructs the detailed CRM System Prompt, transmits it to the LLM (Gemini, OpenAI, or Claude), parses JSON back, maps calling codes, classifies statuses and data sources, validates records (removes invalid rows), and logs data.
+
+#### 3. Log Persistence & Analytics Sync Flow
+- After processing each chunk successfully, the backend saves the details of the import (filename, date, counts, mapped list, skipped list) to `server/data/db.json` via a local synchronous write.
+- Once all batches complete, the client requests the history data via `/api/history` to sync metrics.
+- The **Dashboard** and **History** tabs recalculate analytical indicators dynamically (success rates, distribution maps) and update SVG chart rendering paths.
 
 For a comprehensive breakdown of the data lifecycle, prompt structures, and API request schemas, refer to the [System Documentation](PROJECT_DOCUMENTATION.md).
 

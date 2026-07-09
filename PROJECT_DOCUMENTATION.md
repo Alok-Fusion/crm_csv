@@ -12,17 +12,72 @@ The application is engineered as a monorepo consisting of:
 
 ### System Diagram
 ```
-   [ Next.js SPA Client ] <----------------------> [ Express REST Server ]
-    - Dashboard View (SVG Charts)                    - uploadCSV Controller
-    - CSV Importer View                              - processCSV Controller
-    - History Log View                               - db.js Local DB Driver
-    - Settings & Theme Engine                               |
-           |                                                v
-           v                                         [ data/db.json ]
-    [ Sequential Batch Router ] ----(Chunks of 15)--> (Reads/Writes Metadata)
-           |
-           +----(Automatic Retries on Failed Batches)
+   +-------------------------------------------------------------------+
+   |                       Next.js Client (SPA)                        |
+   |                                                                   |
+   |   [Sidebar Menu] -----> [Dashboard View] (Animated SVG Charts)    |
+   |                 -----> [Importer Wizard] (Drag & Drop Uploader)   |
+   |                 -----> [History View]    (Logs & CSV Download)    |
+   |                 -----> [Settings View]   (Model & Batch Size)     |
+   |                                                                   |
+   |   [Sequential Batcher]                                            |
+   |      - Slices rows into chunks of 15 (dynamic config)             |
+   |      - Fires sequential fetch calls to Express backend            |
+   |      - Implements 3x Frontend Retry Engine with backoff           |
+   +-------------------------------------------------------------------+
+                                   |
+                       (API requests over HTTP)
+                                   |
+                                   v
+   +-------------------------------------------------------------------+
+   |                        Express API Server                         |
+   |                                                                   |
+   |   /api/upload  -----> In-memory Multer + csv-parse                |
+   |   /api/process -----> Validation -> System Prompt -> LLM API      |
+   |                       -> Persistence via db.js                    |
+   |   /api/history -----> Queries JSON DB logs                        |
+   |   /api/settings ----> Reads/Writes system configs                 |
+   +-------------------------------------------------------------------+
+                                   |
+                        (Synchronous disk I/O)
+                                   |
+                                   v
+   +-------------------------------------------------------------------+
+   |                       Local JSON Database                         |
+   |                       (server/data/db.json)                       |
+   +-------------------------------------------------------------------+
 ```
+
+### Architecture Trade-Offs: Local JSON Store vs. Stateful DBMS
+To align with the stateless preference of the project, a lightweight, file-based JSON store was implemented.
+* **Portability**: Requiring no external database server installs (like PostgreSQL or MongoDB) makes running the app via Docker or local shell extremely simple.
+* **Docker Friendliness**: The DB file works out-of-the-box and persists local history logs without requiring heavy volume configurations.
+* **Low Overhead**: History log structures match direct JSON shapes, eliminating the need for relational schemas or ORMs like Prisma.
+
+### Dataflow & Import Job Lifecycle
+
+#### Phase 1: In-Memory File Upload & Local Preview
+1. The user drops a CSV file. The client parses metadata (filename, size) and uploads the binary payload as `multipart/form-data` to `/api/upload`.
+2. The server reads the stream using `multer.memoryStorage()`, forwarding the buffer to `csv-parse`.
+3. The parser handles ragged rows, strips Byte Order Marks (BOM), trims whitespace headers, and converts CSV rows into key-value JSON records.
+4. The backend returns these raw records and headers. The client limits the rendered preview to the first 100 rows to ensure zero browser lag on huge files.
+
+#### Phase 2: Client-Driven AI Extraction & Retry Loops
+1. When the user confirms the import, the client queries settings (like batch size and model defaults) and partitions the rows into subsets.
+2. The client triggers a sequential processing loop.
+3. For each batch request to `/api/process`:
+   - The server validates the rows (skipping records containing neither email nor mobile).
+   - The server builds the mapping system prompt containing strict CRM fields (`crm_status`, `data_source` validation parameters).
+   - The payload is dispatched to the active provider (Gemini 2.0 Flash, OpenAI GPT-4o-mini, or Anthropic Claude 3.5 Sonnet) using raw HTTPS requests (no SDK overhead).
+4. If a batch fails (due to rate limits, network timeouts, or model crashes), the frontend catches the error and triggers up to 3 retries, delaying subsequent attempts.
+
+#### Phase 3: DB Log Persistence & Analytical Updates
+1. As the backend completes processing, it updates `server/data/db.json` by prepending the job record containing the lists of successfully processed and skipped records.
+2. Once the final batch completes, the client fetches the entire updated history list from the server.
+3. The **Dashboard** and **History** screens trigger render cycles:
+   - Success rate circle gauge recalculates stroke-dashoffset percentage path.
+   - Status and Source distribution grids recalculate bar widths dynamically.
+   - History logs list gets updated, showing the new file accordion element.
 
 ---
 
