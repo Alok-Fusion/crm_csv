@@ -102,6 +102,52 @@ export default function DashboardView({ history, onViewChange }) {
     }));
   }, [history]);
 
+  // Dynamic Insights calculations
+  const insights = useMemo(() => {
+    if (history.length === 0) return null;
+
+    // Find top status
+    let topStatusName = '';
+    let topStatusCount = 0;
+    statusDistribution.forEach(item => {
+      if (item.value > topStatusCount) {
+        topStatusCount = item.value;
+        topStatusName = item.name;
+      }
+    });
+
+    // Find top source
+    let topSourceName = '';
+    let topSourceCount = 0;
+    sourceDistribution.forEach(item => {
+      if (item.value > topSourceCount) {
+        topSourceCount = item.value;
+        topSourceName = item.name;
+      }
+    });
+
+    const yieldStatus = stats.successRate >= 80 
+      ? 'High Conversion Yield' 
+      : stats.successRate >= 50 
+        ? 'Moderate Conversion Yield' 
+        : 'Low Conversion Yield';
+
+    const yieldColor = stats.successRate >= 80 
+      ? 'var(--success)' 
+      : stats.successRate >= 50 
+        ? 'var(--warning)' 
+        : 'var(--error)';
+
+    return {
+      topStatusName,
+      topStatusCount,
+      topSourceName,
+      topSourceCount,
+      yieldStatus,
+      yieldColor
+    };
+  }, [history, statusDistribution, sourceDistribution, stats]);
+
   // Circular gauge calculations
   const circumference = 2 * Math.PI * 45;
   const strokeDashoffset = circumference - (stats.successRate / 100) * circumference;
@@ -302,6 +348,35 @@ export default function DashboardView({ history, onViewChange }) {
               </div>
             </div>
           </div>
+
+          {/* Analytical Insights & Recommendations */}
+          {insights && (
+            <div className="card" style={{ marginTop: '16px' }}>
+              <div className="card-header">
+                <h3 className="card-title">Analytical Insights & Key Observations</h3>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.85rem', lineHeight: 1.6 }}>
+                <div>
+                  • The ingestion pipeline shows a <strong style={{ color: insights.yieldColor }}>{insights.yieldStatus} ({stats.successRate}%)</strong>. Out of {stats.totalProcessed} processed records, <strong>{stats.totalImported}</strong> were mapped to valid CRM profiles, while <strong>{stats.totalSkipped}</strong> records were excluded due to missing primary identifiers (email/mobile).
+                </div>
+                {insights.topStatusCount > 0 && (
+                  <div>
+                    • The primary lead segment is <strong style={{ textTransform: 'capitalize' }}>{insights.topStatusName}</strong> with <strong>{insights.topStatusCount}</strong> leads, indicating active follow-up opportunities.
+                  </div>
+                )}
+                {insights.topSourceCount > 0 && (
+                  <div>
+                    • The most active acquisition channel is <strong style={{ textTransform: 'capitalize' }}>{insights.topSourceName}</strong> supplying <strong>{insights.topSourceCount}</strong> records of your aggregate lead pipeline.
+                  </div>
+                )}
+                <div style={{ marginTop: '8px', padding: '10px 12px', backgroundColor: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)', borderLeft: '3px solid var(--accent-primary)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                  <strong>Recommendation:</strong> {stats.successRate >= 80 
+                    ? "Campaign lead quality is optimal. Ensure sales representatives prioritize follow-ups on the 'Good Lead Follow Up' segment." 
+                    : "We recommend reviewing columns on skipped lead spreadsheets to verify if email or mobile data is present but placed under alternative custom headers."}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Recent Activity */}
           <div className="card" style={{ marginTop: '16px' }}>
