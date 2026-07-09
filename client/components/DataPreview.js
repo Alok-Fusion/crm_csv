@@ -28,7 +28,7 @@ export default function DataPreview({ data }) {
   return (
     <div className="step-content">
       <div className="section-header">
-        <h2 className="section-title">📊 Data Preview</h2>
+        <h2 className="section-title">Data Preview</h2>
         <p className="section-desc">
           Review your CSV data before sending it for AI processing.
         </p>
@@ -37,14 +37,14 @@ export default function DataPreview({ data }) {
       <div className="table-info">
         <div className="table-stats">
           <span className="stat-badge">
-            📋 <strong>{totalRows}</strong>&nbsp;rows
+            Rows: <strong>{totalRows}</strong>
           </span>
           <span className="stat-badge">
-            📐 <strong>{columns.length}</strong>&nbsp;columns
+            Columns: <strong>{columns.length}</strong>
           </span>
           {fileName && (
             <span className="stat-badge">
-              📁 {fileName}
+              File: {fileName}
             </span>
           )}
         </div>

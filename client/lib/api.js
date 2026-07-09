@@ -26,14 +26,14 @@ export async function uploadCSV(file) {
 /**
  * Send records to backend for AI processing.
  * @param {Array} records - Raw CSV records to process
- * @param {string} [apiKey] - Optional custom LLM API key
+ * @param {string} fileName - Original name of the uploaded CSV
  * @returns {Promise<Object>} Processed CRM records
  */
-export async function processRecords(records, apiKey) {
+export async function processRecords(records, fileName) {
   const res = await fetch(`${API_BASE}/process`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ records, apiKey }),
+    body: JSON.stringify({ records, fileName }),
   });
 
   const data = await res.json();
@@ -47,11 +47,54 @@ export async function processRecords(records, apiKey) {
 
 /**
  * Check backend health and LLM provider.
- * @param {string} [apiKey] - Optional custom LLM API key to detect provider
  * @returns {Promise<Object>}
  */
-export async function checkHealth(apiKey) {
-  const url = apiKey ? `${API_BASE}/health?apiKey=${encodeURIComponent(apiKey)}` : `${API_BASE}/health`;
-  const res = await fetch(url);
+export async function checkHealth() {
+  const res = await fetch(`${API_BASE}/health`);
+  return res.json();
+}
+
+/**
+ * Fetch past import history logs.
+ * @returns {Promise<Object>}
+ */
+export async function getHistory() {
+  const res = await fetch(`${API_BASE}/history`);
+  if (!res.ok) throw new Error('Failed to load import history');
+  return res.json();
+}
+
+/**
+ * Clear all past import history.
+ * @returns {Promise<Object>}
+ */
+export async function clearHistory() {
+  const res = await fetch(`${API_BASE}/history/clear`, { method: 'POST' });
+  if (!res.ok) throw new Error('Failed to clear history');
+  return res.json();
+}
+
+/**
+ * Get server system settings.
+ * @returns {Promise<Object>}
+ */
+export async function getSettings() {
+  const res = await fetch(`${API_BASE}/settings`);
+  if (!res.ok) throw new Error('Failed to load settings');
+  return res.json();
+}
+
+/**
+ * Save server system settings.
+ * @param {Object} settings - Default settings to save
+ * @returns {Promise<Object>}
+ */
+export async function saveSettings(settings) {
+  const res = await fetch(`${API_BASE}/settings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+  });
+  if (!res.ok) throw new Error('Failed to save settings');
   return res.json();
 }

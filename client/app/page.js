@@ -1,14 +1,24 @@
 'use client';
 
 import { useState, useCallback, useEffect } from 'react';
+import Sidebar from '@/components/Sidebar';
+import DashboardView from '@/components/DashboardView';
+import HistoryView from '@/components/HistoryView';
+import SettingsView from '@/components/SettingsView';
+import AboutView from '@/components/AboutView';
 import StepIndicator from '@/components/StepIndicator';
 import FileUploader from '@/components/FileUploader';
 import DataPreview from '@/components/DataPreview';
 import ProcessingStatus from '@/components/ProcessingStatus';
 import ResultsView from '@/components/ResultsView';
-import { uploadCSV, processRecords, checkHealth } from '@/lib/api';
+import { uploadCSV, processRecords, checkHealth, getHistory, clearHistory, getSettings } from '@/lib/api';
 
 export default function Home() {
+  // Navigation & Theme
+  const [currentView, setCurrentView] = useState('dashboard');
+  const [currentTheme, setCurrentTheme] = useState('dark');
+  const [historyList, setHistoryList] = useState([]);
+
   // Wizard state
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -22,42 +32,40 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(null);
 
-  // Settings state (custom API Key)
-  const [showSettings, setShowSettings] = useState(false);
-  const [localApiKey, setLocalApiKey] = useState('');
-  const [detectedProvider, setDetectedProvider] = useState('none');
-
+  // Load theme and history on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedKey = localStorage.getItem('groweasy_api_key') || '';
-      setLocalApiKey(storedKey);
-      updateDetectedProvider(storedKey);
+      const storedTheme = localStorage.getItem('groweasy_theme') || 'dark';
+      setCurrentTheme(storedTheme);
+      document.documentElement.setAttribute('data-theme', storedTheme);
     }
+    
+    async function loadHistory() {
+      try {
+        const histData = await getHistory();
+        setHistoryList(histData.history || []);
+      } catch (err) {
+        console.error('Failed to load history list:', err.message);
+      }
+    }
+    loadHistory();
   }, []);
 
-  const updateDetectedProvider = (key) => {
-    if (!key) {
-      setDetectedProvider('none');
-      return;
+  const handleThemeChange = (theme) => {
+    setCurrentTheme(theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('groweasy_theme', theme);
+  };
+
+  const handleClearHistory = async () => {
+    if (confirm('Are you sure you want to clear the entire import history? This will delete all saved analytical metrics.')) {
+      try {
+        await clearHistory();
+        setHistoryList([]);
+      } catch (err) {
+        alert(err.message || 'Failed to clear history');
+      }
     }
-    const trimmed = key.trim();
-    if (trimmed.startsWith('AIzaSy')) setDetectedProvider('gemini');
-    else if (trimmed.startsWith('sk-ant')) setDetectedProvider('anthropic');
-    else if (trimmed.startsWith('sk-')) setDetectedProvider('openai');
-    else setDetectedProvider('unknown');
-  };
-
-  const handleApiKeyChange = (e) => {
-    const val = e.target.value;
-    setLocalApiKey(val);
-    updateDetectedProvider(val);
-    localStorage.setItem('groweasy_api_key', val);
-  };
-
-  const handleClearKey = () => {
-    setLocalApiKey('');
-    setDetectedProvider('none');
-    localStorage.removeItem('groweasy_api_key');
   };
 
   // ─── Step 1: Upload ──────────────────────────────────────────────────
@@ -77,7 +85,7 @@ export default function Home() {
     }
   }, []);
 
-  // ─── Step 3: Confirm → Process (REAL BATCHING & RETRY) ──────────────
+  // ─── Step 3: Confirm → Process ──────────────────────────────────────
 
   const handleConfirm = useCallback(async () => {
     if (!previewData?.records) return;
@@ -88,21 +96,21 @@ export default function Home() {
     setProgress(null);
 
     try {
-      // Get the API key if configured on frontend
-      const localKey = localStorage.getItem('groweasy_api_key') || '';
-
       // Check which provider is active
-      const health = await checkHealth(localKey);
+      const health = await checkHealth();
       setProvider(health.llmProvider);
 
       if (health.llmProvider === 'none') {
         throw new Error(
-          'No LLM API key configured. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY on the server, or enter your API key by clicking the settings icon in the top right.'
+          'No AI API key configured on the server. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in the server\'s .env file.'
         );
       }
 
+      // Fetch dynamic batch size settings from the backend database
+      const settingsData = await getSettings();
+      const batchSize = settingsData.settings?.batchSize || 15;
+      
       const totalRecords = previewData.records.length;
-      const batchSize = 15; // Process in batches of 15
       const totalBatches = Math.ceil(totalRecords / batchSize);
 
       let allParsed = [];
@@ -124,7 +132,7 @@ export default function Home() {
         // Frontend retry mechanism (up to 3 times)
         for (let attempt = 1; attempt <= 3; attempt++) {
           try {
-            const res = await processRecords(batchRecords, localKey);
+            const res = await processRecords(batchRecords, previewData.fileName);
             allParsed = allParsed.concat(res.parsed || []);
             allSkipped = allSkipped.concat(res.skipped || []);
             providerName = res.provider || providerName;
@@ -134,7 +142,6 @@ export default function Home() {
             lastErr = err;
             console.warn(`[Batch ${i + 1} Attempt ${attempt} failed]: ${err.message}`);
             if (attempt < 3) {
-              // Wait before retrying (exponentially longer)
               await new Promise((r) => setTimeout(r, 1000 * attempt));
             }
           }
@@ -163,6 +170,10 @@ export default function Home() {
         totalProcessed: allParsed.length + allSkipped.length,
       });
 
+      // Update history list in state
+      const histData = await getHistory();
+      setHistoryList(histData.history || []);
+
       setCurrentStep(4);
     } catch (err) {
       setError(err.message || 'Processing failed. Please try again.');
@@ -184,198 +195,126 @@ export default function Home() {
     setLoading(false);
   }, []);
 
-  // ─── Render ─────────────────────────────────────────────────────────
-
   return (
-    <div className="app-container">
-      {/* Header */}
-      <header className="app-header" style={{ position: 'relative' }}>
-        <div style={{ position: 'absolute', right: 0, top: '24px' }}>
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="btn btn-secondary"
-            style={{ minWidth: 'auto', padding: '8px 12px', borderRadius: '50%' }}
-            title="API Key Settings"
-            id="settings-toggle-btn"
-          >
-            ⚙️ Settings
-          </button>
-        </div>
-        <div className="app-logo">
-          <div className="logo-icon">⚡</div>
-          <h1 className="app-title">GrowEasy CRM Importer</h1>
-        </div>
-        <p className="app-subtitle">
-          Upload any CSV — AI maps your data to CRM fields automatically
-        </p>
-      </header>
+    <div className="dashboard-layout">
+      {/* Sidebar Navigation */}
+      <Sidebar
+        currentView={currentView}
+        onViewChange={setCurrentView}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+      />
 
-      {/* Settings Modal/Panel */}
-      {showSettings && (
-        <div className="glass-card" style={{ marginBottom: '24px', border: '1px solid var(--accent-teal)' }} id="settings-panel">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>🔑 Custom API Key Settings</h3>
-            <button onClick={() => setShowSettings(false)} className="file-remove-btn" style={{ fontSize: '1.1rem' }}>✕</button>
-          </div>
-          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-            You can provide your own API key to bypass server limits. The key is stored locally in your browser and sent directly to the Express backend.
-          </p>
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <input
-              type="password"
-              placeholder="Paste your Gemini, OpenAI, or Anthropic API Key..."
-              value={localApiKey}
-              onChange={handleApiKeyChange}
-              id="api-key-input"
-              style={{
-                flex: 1,
-                minWidth: '280px',
-                padding: '10px 14px',
-                background: 'var(--bg-deep)',
-                border: '1px solid var(--glass-border)',
-                borderRadius: 'var(--radius-md)',
-                color: 'var(--text-primary)',
-                fontSize: '0.875rem',
-                outline: 'none',
-              }}
-            />
-            {localApiKey && (
-              <button className="btn btn-secondary" onClick={handleClearKey} style={{ minHeight: '38px', padding: '0 16px' }} id="clear-key-btn">
-                Clear Key
-              </button>
-            )}
-          </div>
-          {localApiKey && (
-            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Detected Provider:</span>
-              <span
-                style={{
-                  padding: '2px 8px',
-                  borderRadius: '999px',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                  background:
-                    detectedProvider === 'gemini'
-                      ? 'rgba(45, 212, 191, 0.15)'
-                      : detectedProvider === 'openai'
-                      ? 'rgba(59, 130, 246, 0.15)'
-                      : detectedProvider === 'anthropic'
-                      ? 'rgba(139, 92, 246, 0.15)'
-                      : 'rgba(255, 255, 255, 0.1)',
-                  color:
-                    detectedProvider === 'gemini'
-                      ? 'var(--accent-teal)'
-                      : detectedProvider === 'openai'
-                      ? 'var(--accent-blue)'
-                      : detectedProvider === 'anthropic'
-                      ? 'var(--accent-violet)'
-                      : 'var(--text-muted)',
-                }}
-              >
-                {detectedProvider === 'gemini' && '🔮 Google Gemini'}
-                {detectedProvider === 'openai' && '🤖 OpenAI GPT'}
-                {detectedProvider === 'anthropic' && '🟣 Anthropic Claude'}
-                {detectedProvider === 'unknown' && '❓ Unknown format'}
-              </span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Error Banner */}
-      {error && (
-        <div className="error-banner" role="alert" id="error-banner">
-          <span className="error-icon">⚠️</span>
-          <span className="error-text">{error}</span>
-        </div>
-      )}
-
-      {/* Main Content */}
-      <div className="glass-card">
-        {/* Step 1: Upload */}
-        {currentStep === 1 && (
-          <div className="step-content" key="step-1">
-            <div className="section-header">
-              <h2 className="section-title">📤 Upload Your CSV</h2>
-              <p className="section-desc">
-                Drag & drop or browse for any CSV file — Facebook Leads, Google Ads, HubSpot exports, or custom spreadsheets.
-              </p>
-            </div>
-            <FileUploader onFileSelect={handleFileSelect} disabled={loading} />
-            {loading && (
-              <p style={{ textAlign: 'center', marginTop: '16px', color: 'var(--text-muted)' }}>
-                Parsing your CSV...
-              </p>
-            )}
+      {/* Main Content Area */}
+      <main className="main-content">
+        {error && (
+          <div className="error-banner" role="alert" id="error-banner">
+            <span className="error-icon">⚠️</span>
+            <span className="error-text">{error}</span>
           </div>
         )}
 
-        {/* Step 2: Preview */}
-        {currentStep === 2 && previewData && (
-          <div key="step-2">
-            <DataPreview data={previewData} />
-            <div className="confirm-box">
-              <div className="confirm-icon">🤖</div>
-              <h3 className="confirm-title">Ready to process with AI?</h3>
-              <p className="confirm-desc">
-                Our AI will intelligently map these {previewData.totalRows} records to GrowEasy CRM format.
-                Records without an email or phone number will be automatically skipped.
-              </p>
-              <div className="btn-group">
-                <button
-                  className="btn btn-secondary"
-                  onClick={handleReset}
-                  id="back-btn"
-                >
-                  ← Upload Different File
-                </button>
-                <button
-                  className="btn btn-primary"
-                  onClick={handleConfirm}
-                  disabled={loading}
-                  id="confirm-import-btn"
-                >
-                  🚀 Confirm & Import
-                </button>
-              </div>
+        {/* Dashboard View */}
+        {currentView === 'dashboard' && (
+          <DashboardView history={historyList} onViewChange={setCurrentView} />
+        )}
+
+        {/* Importer View */}
+        {currentView === 'importer' && (
+          <div className="step-content">
+            <div className="dashboard-title-section">
+              <h2 className="dashboard-title">CSV Lead Importer</h2>
+              <p className="dashboard-subtitle">Intelligently maps spreadsheets to GrowEasy CRM format</p>
+            </div>
+
+            <StepIndicator currentStep={currentStep} />
+
+            <div className="card">
+              {/* Step 1: Upload */}
+              {currentStep === 1 && (
+                <div>
+                  <div className="section-header">
+                    <h3 className="section-title">Upload CSV File</h3>
+                    <p className="section-desc">Select any standard or non-standard campaign lead export spreadsheet.</p>
+                  </div>
+                  <FileUploader onFileSelect={handleFileSelect} disabled={loading} />
+                  {loading && (
+                    <p style={{ textAlign: 'center', marginTop: '16px', color: 'var(--text-muted)' }}>
+                      Parsing data...
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Step 2: Preview */}
+              {currentStep === 2 && previewData && (
+                <div>
+                  <DataPreview data={previewData} />
+                  <div className="confirm-box">
+                    <h4 className="confirm-title" style={{ marginTop: '24px' }}>Confirm Import Job</h4>
+                    <p className="confirm-desc">
+                      Ready to map {previewData.totalRows} raw rows using AI. Leads with neither email nor mobile will be skipped automatically.
+                    </p>
+                    <div className="btn-group">
+                      <button
+                        className="btn btn-secondary"
+                        onClick={handleReset}
+                        id="back-btn"
+                      >
+                        Upload Different File
+                      </button>
+                      <button
+                        className="btn btn-primary"
+                        onClick={handleConfirm}
+                        disabled={loading}
+                        id="confirm-import-btn"
+                      >
+                        Process & Import
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 3: Processing */}
+              {currentStep === 3 && (
+                <ProcessingStatus progress={progress} provider={provider} />
+              )}
+
+              {/* Step 4: Results */}
+              {currentStep === 4 && results && (
+                <div>
+                  <ResultsView results={results} />
+                  <div className="btn-group" style={{ marginTop: '16px' }}>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={handleReset}
+                      id="new-import-btn"
+                    >
+                      New Import Job
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
 
-        {/* Step 3: Processing */}
-        {currentStep === 3 && (
-          <div key="step-3">
-            <ProcessingStatus progress={progress} provider={provider} />
-          </div>
+        {/* History View */}
+        {currentView === 'history' && (
+          <HistoryView history={historyList} onClear={handleClearHistory} />
         )}
 
-        {/* Step 4: Results */}
-        {currentStep === 4 && results && (
-          <div key="step-4">
-            <ResultsView results={results} />
-            <div className="btn-group" style={{ marginTop: '16px' }}>
-              <button
-                className="btn btn-secondary"
-                onClick={handleReset}
-                id="new-import-btn"
-              >
-                📤 New Import
-              </button>
-            </div>
-          </div>
+        {/* Settings View */}
+        {currentView === 'settings' && (
+          <SettingsView onClearHistory={handleClearHistory} />
         )}
-      </div>
 
-      {/* Footer */}
-      <footer className="app-footer">
-        <p>
-          Built by{' '}
-          <a href="https://github.com/Alok-Fusion" target="_blank" rel="noopener">
-            Alok Kushwaha
-          </a>{' '}
-          &middot; GrowEasy Software Developer Assignment
-        </p>
-      </footer>
+        {/* About View */}
+        {currentView === 'about' && (
+          <AboutView />
+        )}
+      </main>
     </div>
   );
 }

@@ -59,8 +59,12 @@ export default function ResultsView({ results }) {
     <div className="step-content">
       {/* Header */}
       <div className="results-header">
-        <div className="results-icon">✅</div>
-        <h2 className="results-title">Import Complete!</h2>
+        <div className="results-icon">
+          <svg style={{ width: 32, height: 32, fill: 'var(--success)' }} viewBox="0 0 24 24">
+            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
+          </svg>
+        </div>
+        <h2 className="results-title">Import Complete</h2>
         <p className="results-subtitle">
           Your CSV has been processed and mapped to GrowEasy CRM format
         </p>
@@ -83,11 +87,11 @@ export default function ResultsView({ results }) {
         <div className="stat-card">
           <div className="stat-value" style={{ fontSize: '1rem', paddingTop: '8px' }}>
             {provider === 'gemini'
-              ? '🔮 Gemini'
+              ? 'Gemini'
               : provider === 'openai'
-              ? '🤖 GPT'
+              ? 'GPT'
               : provider === 'anthropic'
-              ? '🟣 Claude'
+              ? 'Claude'
               : provider}
           </div>
           <div className="stat-label">AI Provider</div>
@@ -103,7 +107,7 @@ export default function ResultsView({ results }) {
           aria-selected={activeTab === 'parsed'}
           id="tab-parsed"
         >
-          ✅ Imported Records ({totalImported})
+          Imported Records ({totalImported})
         </button>
         <button
           className={`tab-btn ${activeTab === 'skipped' ? 'active' : ''}`}
@@ -112,7 +116,7 @@ export default function ResultsView({ results }) {
           aria-selected={activeTab === 'skipped'}
           id="tab-skipped"
         >
-          ⚠️ Skipped Records ({totalSkipped})
+          Skipped Records ({totalSkipped})
         </button>
       </div>
 
@@ -174,11 +178,13 @@ export default function ResultsView({ results }) {
       ) : (
         <div className="empty-state">
           <div className="empty-state-icon">
-            {activeTab === 'skipped' ? '🎉' : '📭'}
+            <svg style={{ width: 48, height: 48, fill: 'var(--text-muted)', margin: '0 auto', opacity: 0.5 }} viewBox="0 0 24 24">
+              <path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8l8 5 8-5v10zm-8-7L4 6h16l-8 5z" />
+            </svg>
           </div>
           <p className="empty-state-text">
             {activeTab === 'skipped'
-              ? 'No records were skipped — all records imported successfully!'
+              ? 'No records were skipped — all records imported successfully.'
               : 'No records to display.'}
           </p>
         </div>
@@ -192,7 +198,7 @@ export default function ResultsView({ results }) {
             onClick={handleDownload}
             id="download-csv-btn"
           >
-            📥 Download CRM CSV
+            Download CRM CSV
           </button>
         )}
       </div>
