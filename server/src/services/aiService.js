@@ -176,7 +176,6 @@ function callGroq(records, customApiKey) {
       { role: 'user', content: `Process these CSV records into CRM format:\n${JSON.stringify(records, null, 2)}` }
     ],
     temperature: 0.1,
-    response_format: { type: 'json_object' },
   });
 
   return makeRequest({
@@ -190,9 +189,7 @@ function callGroq(records, customApiKey) {
   }, body).then(data => {
     const text = data.choices?.[0]?.message?.content;
     if (!text) throw new Error('Empty response from Groq');
-    const parsed = parseJSONResponse(text);
-    if (parsed && !Array.isArray(parsed) && parsed.records) return parsed.records;
-    return parsed;
+    return parseJSONResponse(text);
   });
 }
 
