@@ -34,7 +34,7 @@ const ALLOWED_DATA_SOURCES = [
   'meridian_tower',
   'eden_park',
   'varah_swamy',
-  'sanjapur_plots',
+  'sarjapur_plots',
 ];
 
 /**

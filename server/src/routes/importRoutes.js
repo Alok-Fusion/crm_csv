@@ -1,6 +1,13 @@
 const express = require('express');
 const multer = require('multer');
-const { uploadCSV, processCSV } = require('../controllers/importController');
+const { 
+  uploadCSV, 
+  processCSV, 
+  getImportHistory, 
+  clearImportHistory,
+  getSystemSettings,
+  saveSystemSettings
+} = require('../controllers/importController');
 
 const router = express.Router();
 
@@ -29,5 +36,13 @@ router.post('/upload', upload.single('file'), uploadCSV);
 
 // Process records with AI
 router.post('/process', processCSV);
+
+// History management
+router.get('/history', getImportHistory);
+router.post('/history/clear', clearImportHistory);
+
+// Settings management
+router.get('/settings', getSystemSettings);
+router.post('/settings', saveSystemSettings);
 
 module.exports = router;
