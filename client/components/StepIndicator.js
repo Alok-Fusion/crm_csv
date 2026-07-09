@@ -18,16 +18,12 @@ export default function StepIndicator({ currentStep }) {
         return (
           <div key={step.number} style={{ display: 'flex', alignItems: 'center' }}>
             <div className={className}>
-              <div className="step-circle" aria-current={isActive ? 'step' : undefined}>
-                {isCompleted ? '✓' : step.number}
-              </div>
+              <span className="step-circle" aria-current={isActive ? 'step' : undefined}>
+                0{step.number}
+              </span>
               <span className="step-label">{step.label}</span>
             </div>
-            {index < STEPS.length - 1 && (
-              <div
-                className={`step-connector ${isCompleted ? 'completed' : ''} ${isActive ? 'active' : ''}`}
-              />
-            )}
+            {index < STEPS.length - 1 && <div className="step-connector" />}
           </div>
         );
       })}
