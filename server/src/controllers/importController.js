@@ -123,7 +123,13 @@ async function clearImportHistory(req, res, next) {
 async function getSystemSettings(req, res, next) {
   try {
     const settings = db.getSettings();
-    res.json({ success: true, settings });
+    const keys = {
+      gemini: !!process.env.GEMINI_API_KEY,
+      openai: !!process.env.OPENAI_API_KEY,
+      anthropic: !!process.env.ANTHROPIC_API_KEY,
+      groq: !!process.env.GROQ_API_KEY,
+    };
+    res.json({ success: true, settings, keys });
   } catch (err) {
     next(err);
   }

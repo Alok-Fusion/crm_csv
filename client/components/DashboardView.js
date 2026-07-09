@@ -1,8 +1,25 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { getSettings } from '@/lib/api';
 
 export default function DashboardView({ history, onViewChange }) {
+  const [keyConfig, setKeyConfig] = useState(null);
+
+  useEffect(() => {
+    async function loadKeyConfig() {
+      try {
+        const res = await getSettings();
+        if (res.keys) {
+          setKeyConfig(res.keys);
+        }
+      } catch (err) {
+        console.error('Failed to load server key configuration status:', err.message);
+      }
+    }
+    loadKeyConfig();
+  }, []);
+
   // Aggregate statistics
   const stats = useMemo(() => {
     let totalImported = 0;
@@ -282,23 +299,44 @@ export default function DashboardView({ history, onViewChange }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '24px' }}>
                 <div className="chart-container">
                   <h4 style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '8px' }}>Volume Mapped by Provider</h4>
-                  {providerDistribution.map((item) => (
-                    <div key={item.rawName} className="bar-chart-row">
-                      <span className="bar-chart-label" style={{ width: '130px' }} title={item.name}>
-                        {item.name}
-                      </span>
-                      <div className="bar-chart-track">
-                        <div
-                          className="bar-chart-fill"
-                          style={{
-                            width: `${item.percentage}%`,
-                            backgroundColor: item.rawName === 'groq' ? 'var(--success)' : 'var(--text-primary)'
-                          }}
-                        />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {providerDistribution.map((item) => (
+                      <div key={item.rawName} className="bar-chart-row">
+                        <span className="bar-chart-label" style={{ width: '130px' }} title={item.name}>
+                          {item.name}
+                        </span>
+                        <div className="bar-chart-track">
+                          <div
+                            className="bar-chart-fill"
+                            style={{
+                              width: `${item.percentage}%`,
+                              backgroundColor: item.rawName === 'groq' ? 'var(--success)' : 'var(--text-primary)'
+                            }}
+                          />
+                        </div>
+                        <span className="bar-chart-value" style={{ width: '80px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px' }}>
+                          <strong>{item.value}</strong>
+                          {keyConfig && (
+                            <span
+                              title={keyConfig[item.rawName] ? 'Key Configured (Active)' : 'Key Missing (Inactive)'}
+                              style={{
+                                width: '6px',
+                                height: '6px',
+                                borderRadius: '50%',
+                                backgroundColor: keyConfig[item.rawName] ? 'var(--success)' : 'var(--text-muted)',
+                                display: 'inline-block'
+                              }}
+                            />
+                          )}
+                        </span>
                       </div>
-                      <span className="bar-chart-value">{item.value}</span>
+                    ))}
+                  </div>
+                  {keyConfig && (
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '12px' }}>
+                      * Status dots indicate key configurations inside server environment variables.
                     </div>
-                  ))}
+                  )}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div style={{ padding: '12px', backgroundColor: 'var(--bg-elevated)', borderRadius: 'var(--radius-sm)' }}>
