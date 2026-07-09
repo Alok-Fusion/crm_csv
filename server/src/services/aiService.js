@@ -290,10 +290,21 @@ async function processRecordsWithAI(records, customApiKey, preferredProvider, on
     groq: (recs) => callGroq(recs, actualApiKey),
   }[provider];
 
+  // Squeeze and clean records to strip empty/null/undefined properties to minimize prompt token footprint (rate limit mitigation)
+  const cleanedRecords = records.map(record => {
+    const clean = {};
+    for (const [key, value] of Object.entries(record)) {
+      if (value !== null && value !== undefined && value.toString().trim() !== '') {
+        clean[key] = value.toString().trim();
+      }
+    }
+    return clean;
+  });
+
   // Split into batches
   const batches = [];
-  for (let i = 0; i < records.length; i += BATCH_SIZE) {
-    batches.push(records.slice(i, i + BATCH_SIZE));
+  for (let i = 0; i < cleanedRecords.length; i += BATCH_SIZE) {
+    batches.push(cleanedRecords.slice(i, i + BATCH_SIZE));
   }
 
   const allParsed = [];

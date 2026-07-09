@@ -125,6 +125,11 @@ export default function Home() {
       });
 
       for (let i = 0; i < totalBatches; i++) {
+        // Cooldown delay between successful batches to prevent rate limits
+        if (i > 0) {
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+
         const batchRecords = previewData.records.slice(i * batchSize, (i + 1) * batchSize);
         let success = false;
         let lastErr = null;
@@ -141,8 +146,17 @@ export default function Home() {
           } catch (err) {
             lastErr = err;
             console.warn(`[Batch ${i + 1} Attempt ${attempt} failed]: ${err.message}`);
+            
             if (attempt < 3) {
-              await new Promise((r) => setTimeout(r, 1000 * attempt));
+              // Parse rate-limit wait time if specified by the API (e.g. "try again in 12.105s")
+              let delayMs = 1500 * attempt;
+              const match = err.message.match(/try again in ([\d.]+)s/i);
+              if (match) {
+                const seconds = parseFloat(match[1]);
+                delayMs = Math.ceil(seconds * 1000) + 1000; // Add 1s safety buffer
+                console.info(`[Rate Limit Recovery] Throttling active. Waiting ${Math.ceil(delayMs / 1000)}s before retry...`);
+              }
+              await new Promise((r) => setTimeout(r, delayMs));
             }
           }
         }
