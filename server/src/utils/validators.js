@@ -31,10 +31,10 @@ const ALLOWED_CRM_STATUSES = [
  */
 const ALLOWED_DATA_SOURCES = [
   'leads_on_demand',
-  'migration_tower',
-  'bird_eye',
-  'varol_priority',
-  'kanpur_sale',
+  'meridian_tower',
+  'eden_park',
+  'varah_swamy',
+  'sanjapur_plots',
 ];
 
 /**

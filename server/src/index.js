@@ -20,10 +20,11 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check
 app.get('/api/health', (req, res) => {
+  const key = req.query.apiKey || req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
-    llmProvider: detectProvider(),
+    llmProvider: detectProvider(key),
   });
 });
 
@@ -49,7 +50,13 @@ app.use((err, req, res, next) => {
 });
 
 // Detect which LLM provider is configured
-function detectProvider() {
+function detectProvider(customApiKey) {
+  if (customApiKey) {
+    const trimmed = customApiKey.trim();
+    if (trimmed.startsWith('AIzaSy')) return 'gemini';
+    if (trimmed.startsWith('sk-ant')) return 'anthropic';
+    if (trimmed.startsWith('sk-')) return 'openai';
+  }
   if (process.env.GEMINI_API_KEY) return 'gemini';
   if (process.env.OPENAI_API_KEY) return 'openai';
   if (process.env.ANTHROPIC_API_KEY) return 'anthropic';

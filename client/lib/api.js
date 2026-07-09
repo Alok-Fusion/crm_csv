@@ -26,13 +26,14 @@ export async function uploadCSV(file) {
 /**
  * Send records to backend for AI processing.
  * @param {Array} records - Raw CSV records to process
+ * @param {string} [apiKey] - Optional custom LLM API key
  * @returns {Promise<Object>} Processed CRM records
  */
-export async function processRecords(records) {
+export async function processRecords(records, apiKey) {
   const res = await fetch(`${API_BASE}/process`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ records }),
+    body: JSON.stringify({ records, apiKey }),
   });
 
   const data = await res.json();
@@ -46,9 +47,11 @@ export async function processRecords(records) {
 
 /**
  * Check backend health and LLM provider.
+ * @param {string} [apiKey] - Optional custom LLM API key to detect provider
  * @returns {Promise<Object>}
  */
-export async function checkHealth() {
-  const res = await fetch(`${API_BASE}/health`);
+export async function checkHealth(apiKey) {
+  const url = apiKey ? `${API_BASE}/health?apiKey=${encodeURIComponent(apiKey)}` : `${API_BASE}/health`;
+  const res = await fetch(url);
   return res.json();
 }

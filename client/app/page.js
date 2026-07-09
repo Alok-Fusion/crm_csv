@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import StepIndicator from '@/components/StepIndicator';
 import FileUploader from '@/components/FileUploader';
 import DataPreview from '@/components/DataPreview';
@@ -22,6 +22,44 @@ export default function Home() {
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(null);
 
+  // Settings state (custom API Key)
+  const [showSettings, setShowSettings] = useState(false);
+  const [localApiKey, setLocalApiKey] = useState('');
+  const [detectedProvider, setDetectedProvider] = useState('none');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedKey = localStorage.getItem('groweasy_api_key') || '';
+      setLocalApiKey(storedKey);
+      updateDetectedProvider(storedKey);
+    }
+  }, []);
+
+  const updateDetectedProvider = (key) => {
+    if (!key) {
+      setDetectedProvider('none');
+      return;
+    }
+    const trimmed = key.trim();
+    if (trimmed.startsWith('AIzaSy')) setDetectedProvider('gemini');
+    else if (trimmed.startsWith('sk-ant')) setDetectedProvider('anthropic');
+    else if (trimmed.startsWith('sk-')) setDetectedProvider('openai');
+    else setDetectedProvider('unknown');
+  };
+
+  const handleApiKeyChange = (e) => {
+    const val = e.target.value;
+    setLocalApiKey(val);
+    updateDetectedProvider(val);
+    localStorage.setItem('groweasy_api_key', val);
+  };
+
+  const handleClearKey = () => {
+    setLocalApiKey('');
+    setDetectedProvider('none');
+    localStorage.removeItem('groweasy_api_key');
+  };
+
   // ─── Step 1: Upload ──────────────────────────────────────────────────
 
   const handleFileSelect = useCallback(async (file) => {
@@ -39,7 +77,7 @@ export default function Home() {
     }
   }, []);
 
-  // ─── Step 3: Confirm → Process ──────────────────────────────────────
+  // ─── Step 3: Confirm → Process (REAL BATCHING & RETRY) ──────────────
 
   const handleConfirm = useCallback(async () => {
     if (!previewData?.records) return;
@@ -50,46 +88,81 @@ export default function Home() {
     setProgress(null);
 
     try {
+      // Get the API key if configured on frontend
+      const localKey = localStorage.getItem('groweasy_api_key') || '';
+
       // Check which provider is active
-      const health = await checkHealth();
+      const health = await checkHealth(localKey);
       setProvider(health.llmProvider);
 
       if (health.llmProvider === 'none') {
         throw new Error(
-          'No AI API key configured on the server. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in server/.env'
+          'No LLM API key configured. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY on the server, or enter your API key by clicking the settings icon in the top right.'
         );
       }
 
-      // Simulate progress updates (since we can't stream from a single POST)
       const totalRecords = previewData.records.length;
-      const batchSize = 15;
+      const batchSize = 15; // Process in batches of 15
       const totalBatches = Math.ceil(totalRecords / batchSize);
 
-      // Start a fake progress timer
-      let fakeBatch = 0;
-      const progressTimer = setInterval(() => {
-        fakeBatch = Math.min(fakeBatch + 1, totalBatches - 1);
-        setProgress({
-          processedBatches: fakeBatch,
-          totalBatches,
-          processedRecords: Math.min(fakeBatch * batchSize, totalRecords),
-          totalRecords,
-        });
-      }, 2000);
+      let allParsed = [];
+      let allSkipped = [];
+      let providerName = health.llmProvider;
 
-      const data = await processRecords(previewData.records);
-
-      clearInterval(progressTimer);
-
-      // Final progress
       setProgress({
-        processedBatches: totalBatches,
+        processedBatches: 0,
         totalBatches,
-        processedRecords: totalRecords,
+        processedRecords: 0,
         totalRecords,
       });
 
-      setResults(data);
+      for (let i = 0; i < totalBatches; i++) {
+        const batchRecords = previewData.records.slice(i * batchSize, (i + 1) * batchSize);
+        let success = false;
+        let lastErr = null;
+
+        // Frontend retry mechanism (up to 3 times)
+        for (let attempt = 1; attempt <= 3; attempt++) {
+          try {
+            const res = await processRecords(batchRecords, localKey);
+            allParsed = allParsed.concat(res.parsed || []);
+            allSkipped = allSkipped.concat(res.skipped || []);
+            providerName = res.provider || providerName;
+            success = true;
+            break; // Batch processed successfully
+          } catch (err) {
+            lastErr = err;
+            console.warn(`[Batch ${i + 1} Attempt ${attempt} failed]: ${err.message}`);
+            if (attempt < 3) {
+              // Wait before retrying (exponentially longer)
+              await new Promise((r) => setTimeout(r, 1000 * attempt));
+            }
+          }
+        }
+
+        if (!success) {
+          throw new Error(
+            `Failed to process batch ${i + 1} of ${totalBatches} after 3 attempts: ${lastErr?.message || 'Unknown error'}`
+          );
+        }
+
+        setProgress({
+          processedBatches: i + 1,
+          totalBatches,
+          processedRecords: Math.min((i + 1) * batchSize, totalRecords),
+          totalRecords,
+        });
+      }
+
+      setResults({
+        provider: providerName,
+        parsed: allParsed,
+        skipped: allSkipped,
+        totalImported: allParsed.length,
+        totalSkipped: allSkipped.length,
+        totalProcessed: allParsed.length + allSkipped.length,
+      });
+
       setCurrentStep(4);
     } catch (err) {
       setError(err.message || 'Processing failed. Please try again.');
@@ -116,7 +189,18 @@ export default function Home() {
   return (
     <div className="app-container">
       {/* Header */}
-      <header className="app-header">
+      <header className="app-header" style={{ position: 'relative' }}>
+        <div style={{ position: 'absolute', right: 0, top: '24px' }}>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="btn btn-secondary"
+            style={{ minWidth: 'auto', padding: '8px 12px', borderRadius: '50%' }}
+            title="API Key Settings"
+            id="settings-toggle-btn"
+          >
+            ⚙️ Settings
+          </button>
+        </div>
         <div className="app-logo">
           <div className="logo-icon">⚡</div>
           <h1 className="app-title">GrowEasy CRM Importer</h1>
@@ -126,8 +210,77 @@ export default function Home() {
         </p>
       </header>
 
-      {/* Step Indicator */}
-      <StepIndicator currentStep={currentStep} />
+      {/* Settings Modal/Panel */}
+      {showSettings && (
+        <div className="glass-card" style={{ marginBottom: '24px', border: '1px solid var(--accent-teal)' }} id="settings-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '1.1rem', fontWeight: 600 }}>🔑 Custom API Key Settings</h3>
+            <button onClick={() => setShowSettings(false)} className="file-remove-btn" style={{ fontSize: '1.1rem' }}>✕</button>
+          </div>
+          <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+            You can provide your own API key to bypass server limits. The key is stored locally in your browser and sent directly to the Express backend.
+          </p>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <input
+              type="password"
+              placeholder="Paste your Gemini, OpenAI, or Anthropic API Key..."
+              value={localApiKey}
+              onChange={handleApiKeyChange}
+              id="api-key-input"
+              style={{
+                flex: 1,
+                minWidth: '280px',
+                padding: '10px 14px',
+                background: 'var(--bg-deep)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: 'var(--radius-md)',
+                color: 'var(--text-primary)',
+                fontSize: '0.875rem',
+                outline: 'none',
+              }}
+            />
+            {localApiKey && (
+              <button className="btn btn-secondary" onClick={handleClearKey} style={{ minHeight: '38px', padding: '0 16px' }} id="clear-key-btn">
+                Clear Key
+              </button>
+            )}
+          </div>
+          {localApiKey && (
+            <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Detected Provider:</span>
+              <span
+                style={{
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  background:
+                    detectedProvider === 'gemini'
+                      ? 'rgba(45, 212, 191, 0.15)'
+                      : detectedProvider === 'openai'
+                      ? 'rgba(59, 130, 246, 0.15)'
+                      : detectedProvider === 'anthropic'
+                      ? 'rgba(139, 92, 246, 0.15)'
+                      : 'rgba(255, 255, 255, 0.1)',
+                  color:
+                    detectedProvider === 'gemini'
+                      ? 'var(--accent-teal)'
+                      : detectedProvider === 'openai'
+                      ? 'var(--accent-blue)'
+                      : detectedProvider === 'anthropic'
+                      ? 'var(--accent-violet)'
+                      : 'var(--text-muted)',
+                }}
+              >
+                {detectedProvider === 'gemini' && '🔮 Google Gemini'}
+                {detectedProvider === 'openai' && '🤖 OpenAI GPT'}
+                {detectedProvider === 'anthropic' && '🟣 Anthropic Claude'}
+                {detectedProvider === 'unknown' && '❓ Unknown format'}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Error Banner */}
       {error && (

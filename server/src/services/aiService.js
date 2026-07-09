@@ -4,7 +4,13 @@ const { ALLOWED_CRM_STATUSES, ALLOWED_DATA_SOURCES, CRM_FIELDS } = require('../u
 
 // ─── LLM Provider Detection ──────────────────────────────────────────────────
 
-function detectProvider() {
+function detectProvider(customApiKey) {
+  if (customApiKey) {
+    const trimmed = customApiKey.trim();
+    if (trimmed.startsWith('AIzaSy')) return 'gemini';
+    if (trimmed.startsWith('sk-ant')) return 'anthropic';
+    if (trimmed.startsWith('sk-')) return 'openai';
+  }
   if (process.env.GEMINI_API_KEY) return 'gemini';
   if (process.env.OPENAI_API_KEY) return 'openai';
   if (process.env.ANTHROPIC_API_KEY) return 'anthropic';
@@ -63,8 +69,8 @@ IMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no explanation. 
 
 // ─── API Call Implementations ─────────────────────────────────────────────────
 
-function callGemini(records) {
-  const apiKey = process.env.GEMINI_API_KEY;
+function callGemini(records, customApiKey) {
+  const apiKey = customApiKey || process.env.GEMINI_API_KEY;
   const model = 'gemini-2.0-flash';
 
   const body = JSON.stringify({
@@ -92,8 +98,8 @@ function callGemini(records) {
   });
 }
 
-function callOpenAI(records) {
-  const apiKey = process.env.OPENAI_API_KEY;
+function callOpenAI(records, customApiKey) {
+  const apiKey = customApiKey || process.env.OPENAI_API_KEY;
 
   const body = JSON.stringify({
     model: 'gpt-4o-mini',
@@ -123,8 +129,8 @@ function callOpenAI(records) {
   });
 }
 
-function callAnthropic(records) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+function callAnthropic(records, customApiKey) {
+  const apiKey = customApiKey || process.env.ANTHROPIC_API_KEY;
 
   const body = JSON.stringify({
     model: 'claude-sonnet-4-20250514',
@@ -220,16 +226,24 @@ function parseJSONResponse(text) {
 const BATCH_SIZE = 15;
 const MAX_RETRIES = 3;
 
-async function processRecordsWithAI(records, onProgress) {
-  const provider = detectProvider();
+async function processRecordsWithAI(records, customApiKey, onProgress) {
+  // If third argument is a function, maybe onProgress was passed as second argument
+  let actualApiKey = customApiKey;
+  let actualOnProgress = onProgress;
+  if (typeof customApiKey === 'function') {
+    actualOnProgress = customApiKey;
+    actualApiKey = null;
+  }
+
+  const provider = detectProvider(actualApiKey);
   if (!provider) {
-    throw new Error('No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in your .env file.');
+    throw new Error('No LLM API key configured. Set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in your .env file, or enter an API key in the UI.');
   }
 
   const callLLM = {
-    gemini: callGemini,
-    openai: callOpenAI,
-    anthropic: callAnthropic,
+    gemini: (recs) => callGemini(recs, actualApiKey),
+    openai: (recs) => callOpenAI(recs, actualApiKey),
+    anthropic: (recs) => callAnthropic(recs, actualApiKey),
   }[provider];
 
   // Split into batches

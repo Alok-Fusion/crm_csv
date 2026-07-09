@@ -36,22 +36,23 @@ async function uploadCSV(req, res, next) {
  */
 async function processCSV(req, res, next) {
   try {
-    const { records } = req.body;
+    const { records, apiKey } = req.body;
+    const customApiKey = apiKey || req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '');
 
     if (!records || !Array.isArray(records) || records.length === 0) {
       return res.status(400).json({ error: 'No records provided for processing.' });
     }
 
-    const provider = detectProvider();
+    const provider = detectProvider(customApiKey);
     if (!provider) {
-      return res.status(500).json({
-        error: 'No LLM API key configured. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY in your server .env file.',
+      return res.status(400).json({
+        error: 'No LLM API key configured. Please set GEMINI_API_KEY, OPENAI_API_KEY, or ANTHROPIC_API_KEY on the server, or enter an API key in the UI settings.',
       });
     }
 
     console.log(`[AI] Processing ${records.length} records using ${provider.toUpperCase()}...`);
 
-    const result = await processRecordsWithAI(records, (progress) => {
+    const result = await processRecordsWithAI(records, customApiKey, (progress) => {
       console.log(`[AI] Progress: Batch ${progress.processedBatches}/${progress.totalBatches} (${progress.processedRecords}/${progress.totalRecords} records)`);
     });
 
