@@ -1,0 +1,15 @@
+{
+  "name": "crm-csv-monorepo",
+  "version": "1.0.0",
+  "description": "GrowEasy CRM CSV Importer Monorepo",
+  "main": "server/src/index.js",
+  "scripts": {
+    "start": "node server/src/index.js",
+    "server": "npm run dev --prefix server",
+    "client": "npm run dev --prefix client",
+    "build": "npm run build --prefix client"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
