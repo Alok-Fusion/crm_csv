@@ -1,10 +1,10 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "GrowEasy CRM Importer — AI-Powered CSV Import",
+  title: "FlexCRM Importer — AI-Powered CSV Import",
   description:
-    "Upload any CSV file and let AI intelligently map your data to GrowEasy CRM fields. Supports OpenAI, Gemini, and Claude.",
-  keywords: ["CRM", "CSV", "Import", "AI", "GrowEasy", "Lead Management"],
+    "Upload any CSV file and let AI intelligently map your data to FlexCRM fields. Supports OpenAI, Gemini, Claude, and Groq.",
+  keywords: ["CRM", "CSV", "Import", "AI", "FlexCRM", "Lead Management"],
 };
 
 export default function RootLayout({ children }) {
