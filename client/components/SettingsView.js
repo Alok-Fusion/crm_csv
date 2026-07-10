@@ -5,7 +5,7 @@ import { getSettings, saveSettings } from '@/lib/api';
 
 export default function SettingsView({ onClearHistory }) {
   const [model, setModel] = useState('gemini-2.0-flash');
-  const [batchSize, setBatchSize] = useState(15);
+  const [batchSize, setBatchSize] = useState(10);
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -16,7 +16,7 @@ export default function SettingsView({ onClearHistory }) {
         const res = await getSettings();
         if (res.settings) {
           setModel(res.settings.defaultModel || 'gemini-2.0-flash');
-          setBatchSize(res.settings.batchSize || 15);
+          setBatchSize(res.settings.batchSize || 10);
         }
       } catch (err) {
         console.error('Failed to load server settings:', err.message);

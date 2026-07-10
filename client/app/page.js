@@ -108,7 +108,7 @@ export default function Home() {
 
       // Fetch dynamic batch size settings from the backend database
       const settingsData = await getSettings();
-      const batchSize = settingsData.settings?.batchSize || 15;
+      const batchSize = settingsData.settings?.batchSize || 10;
       
       const totalRecords = previewData.records.length;
       const totalBatches = Math.ceil(totalRecords / batchSize);

@@ -12,14 +12,14 @@ if (!fs.existsSync(dir)) {
 // Helper to read database
 function readDB() {
   if (!fs.existsSync(dbPath)) {
-    return { imports: [], settings: { defaultModel: 'gemini-2.0-flash', batchSize: 15 } };
+    return { imports: [], settings: { defaultModel: 'gemini-2.0-flash', batchSize: 10 } };
   }
   try {
     const content = fs.readFileSync(dbPath, 'utf8');
     return JSON.parse(content);
   } catch (e) {
     console.error('[DB] Read error, resetting database:', e.message);
-    return { imports: [], settings: { defaultModel: 'gemini-2.0-flash', batchSize: 15 } };
+    return { imports: [], settings: { defaultModel: 'gemini-2.0-flash', batchSize: 10 } };
   }
 }
 
@@ -62,7 +62,7 @@ module.exports = {
 
   getSettings: () => {
     const db = readDB();
-    return db.settings || { defaultModel: 'gemini-2.0-flash', batchSize: 15 };
+    return db.settings || { defaultModel: 'gemini-2.0-flash', batchSize: 10 };
   },
 
   saveSettings: (newSettings) => {

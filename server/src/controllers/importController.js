@@ -142,7 +142,7 @@ async function getSystemSettings(req, res, next) {
 async function saveSystemSettings(req, res, next) {
   try {
     const { defaultModel, batchSize } = req.body;
-    const settings = db.saveSettings({ defaultModel, batchSize: parseInt(batchSize, 10) || 15 });
+    const settings = db.saveSettings({ defaultModel, batchSize: parseInt(batchSize, 10) || 10 });
     res.json({ success: true, settings, message: 'Settings saved successfully.' });
   } catch (err) {
     next(err);
