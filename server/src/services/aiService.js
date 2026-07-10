@@ -2,7 +2,7 @@ const https = require('https');
 const http = require('http');
 const { ALLOWED_CRM_STATUSES, ALLOWED_DATA_SOURCES, CRM_FIELDS } = require('../utils/validators');
 
-// ─── LLM Provider Detection ──────────────────────────────────────────────────
+// LLM Provider Detection
 
 function detectProvider(customApiKey, preferredProvider) {
   if (customApiKey) {
@@ -24,7 +24,7 @@ function detectProvider(customApiKey, preferredProvider) {
   return null;
 }
 
-// ─── System Prompt ────────────────────────────────────────────────────────────
+// System Prompt
 
 const SYSTEM_PROMPT = `You are a CRM data extraction expert. Your job is to intelligently map raw CSV record data into the GrowEasy CRM format.
 
@@ -79,7 +79,7 @@ Return a JSON array of objects. Each object must have ALL CRM fields listed abov
 
 IMPORTANT: Return ONLY valid JSON. No markdown, no code fences, no explanation. Just the raw JSON array.`;
 
-// ─── API Call Implementations ─────────────────────────────────────────────────
+// API Call Implementations
 
 function callGemini(records, customApiKey) {
   const apiKey = customApiKey || process.env.GEMINI_API_KEY;
@@ -198,7 +198,7 @@ function callGroq(records, customApiKey) {
   });
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// Helpers
 
 function makeRequest(options, body) {
   return new Promise((resolve, reject) => {
@@ -261,7 +261,7 @@ function parseJSONResponse(text) {
   }
 }
 
-// ─── Main Export: Process Records ─────────────────────────────────────────────
+// Main Export: Process Records
 
 const BATCH_SIZE = 15;
 const MAX_RETRIES = 3;

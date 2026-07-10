@@ -68,7 +68,7 @@ export default function Home() {
     }
   };
 
-  // ─── Step 1: Upload ──────────────────────────────────────────────────
+  // Step 1: Upload
 
   const handleFileSelect = useCallback(async (file) => {
     setError(null);
@@ -85,7 +85,7 @@ export default function Home() {
     }
   }, []);
 
-  // ─── Step 3: Confirm → Process ──────────────────────────────────────
+  // Step 3: Confirm & Process
 
   const handleConfirm = useCallback(async () => {
     if (!previewData?.records) return;
@@ -197,7 +197,7 @@ export default function Home() {
     }
   }, [previewData]);
 
-  // ─── Reset ──────────────────────────────────────────────────────────
+  // Reset State
 
   const handleReset = useCallback(() => {
     setCurrentStep(1);
