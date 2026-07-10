@@ -1,4 +1,4 @@
-# 🚀 GrowEasy CRM CSV Importer — Enterprise Lead Importer & Analytics Dashboard
+# 🚀 FlexCRM CSV Importer — Enterprise Lead Importer & Analytics Dashboard
 
 [![Express API](https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white)](https://expressjs.com/)
 [![Next.js Frontend](https://img.shields.io/badge/Next.js%2015-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)](https://nextjs.org/)
@@ -6,7 +6,7 @@
 [![LLM Models Supported](https://img.shields.io/badge/AI--Powered-Gemini%20%7C%20OpenAI%20%7C%20Claude%20%7C%20Groq-blueviolet?style=for-the-badge)](https://ai.google.dev/)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 
-An intelligent, AI-powered CSV importer that parses, sanitizes, and maps campaign lead sheets of **any layout, column structure, or header configuration** into the strict **GrowEasy CRM format**. 
+An intelligent, AI-powered CSV importer that parses, sanitizes, and maps campaign lead sheets of **any layout, column structure, or header configuration** into the strict **FlexCRM format**. 
 
 Equipped with a dual-theme analytical dashboard, persistent history logs, custom SVG visualization charts, and sequential progress tracking with automated retries.
 
@@ -192,7 +192,7 @@ ANTHROPIC_API_KEY=sk-ant-...
 
 ## 📋 CRM Validation Specs & Constraints
 
-Leads are parsed and validated according to the following GrowEasy CRM specifications:
+Leads are parsed and validated according to the following FlexCRM specifications:
 
 ### Field Mappings
 | Target CRM Field | Description | AI Rule |
@@ -245,7 +245,7 @@ crm_csv/
 - **Candidate**: Alok Kushwaha
 - **Position**: Software Developer (Intern / Full-Time)
 - **Work Mode**: Work From Home (WFH)
-- **Email for Submission**: `varun@groweasy.ai`
+- **Email for Submission**: `varun@flexcrm.ai`
 - **Hosted Application**: [Verify Active Link](https://portfolio-data-omega.vercel.app)
 - **GitHub Repository**: [GitHub Link](https://github.com/Alok-Fusion/crm_csv.git)
 

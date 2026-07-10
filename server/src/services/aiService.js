@@ -26,7 +26,7 @@ function detectProvider(customApiKey, preferredProvider) {
 
 // System Prompt
 
-const SYSTEM_PROMPT = `You are a CRM data extraction expert. Your job is to intelligently map raw CSV record data into the GrowEasy CRM format.
+const SYSTEM_PROMPT = `You are a CRM data extraction expert. Your job is to intelligently map raw CSV record data into the FlexCRM format.
 
 ## CRM Fields (output exactly these keys):
 ${CRM_FIELDS.map(f => `- ${f}`).join('\n')}

@@ -1,7 +1,7 @@
 {
   "name": "crm-csv-server",
   "version": "1.0.0",
-  "description": "Backend API for GrowEasy CRM CSV Importer",
+  "description": "Backend API for FlexCRM CSV Importer",
   "main": "src/index.js",
   "scripts": {
     "dev": "node --watch src/index.js",

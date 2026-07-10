@@ -1,6 +1,6 @@
-# GrowEasy CRM CSV Importer — Technical & System Documentation
+# FlexCRM CSV Importer — Technical & System Documentation
 
-This document provides a detailed breakdown of the system design, prompt engineering strategies, state architectures, and integration paradigms implemented within the GrowEasy CRM CSV Importer.
+This document provides a detailed breakdown of the system design, prompt engineering strategies, state architectures, and integration paradigms implemented within the FlexCRM CSV Importer.
 
 ---
 
@@ -211,7 +211,7 @@ The Prompt adapter `server/src/services/aiService.js` builds a structured instru
 
 ### Core System Prompt Layout
 ```
-You are a CRM data extraction expert. Your job is to intelligently map raw CSV record data into the GrowEasy CRM format.
+You are a CRM data extraction expert. Your job is to intelligently map raw CSV record data into the FlexCRM format.
 
 ## CRM Fields (output exactly these keys):
 - created_at

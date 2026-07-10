@@ -238,7 +238,7 @@ export default function Home() {
           <div className="step-content">
             <div className="dashboard-title-section">
               <h2 className="dashboard-title">CSV Lead Importer</h2>
-              <p className="dashboard-subtitle">Intelligently maps spreadsheets to GrowEasy CRM format</p>
+              <p className="dashboard-subtitle">Intelligently maps spreadsheets to FlexCRM format</p>
             </div>
 
             <StepIndicator currentStep={currentStep} />

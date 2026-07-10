@@ -16,7 +16,7 @@ export default function ProcessingStatus({ progress, provider }) {
 
         <h2 className="processing-title">AI is analyzing your data...</h2>
         <p className="processing-subtitle">
-          Intelligently mapping CSV columns to GrowEasy CRM fields
+          Intelligently mapping CSV columns to FlexCRM fields
         </p>
 
         {progress && (

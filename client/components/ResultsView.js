@@ -66,7 +66,7 @@ export default function ResultsView({ results }) {
         </div>
         <h2 className="results-title">Import Complete</h2>
         <p className="results-subtitle">
-          Your CSV has been processed and mapped to GrowEasy CRM format
+          Your CSV has been processed and mapped to FlexCRM format
         </p>
       </div>
 

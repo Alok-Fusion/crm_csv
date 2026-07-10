@@ -1,7 +1,7 @@
 {
   "name": "crm-csv-monorepo",
   "version": "1.0.0",
-  "description": "GrowEasy CRM CSV Importer Monorepo",
+  "description": "FlexCRM CSV Importer Monorepo",
   "main": "server/src/index.js",
   "scripts": {
     "start": "node server/src/index.js",

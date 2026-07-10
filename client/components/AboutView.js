@@ -5,7 +5,7 @@ export default function AboutView() {
     <div className="step-content">
       <div className="dashboard-title-section">
         <h2 className="dashboard-title">About System</h2>
-        <p className="dashboard-subtitle">GrowEasy CRM CSV Importer details</p>
+        <p className="dashboard-subtitle">FlexCRM CSV Importer details</p>
       </div>
 
       <div className="card">
@@ -13,7 +13,7 @@ export default function AboutView() {
           <h3 className="card-title">Product Description</h3>
         </div>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
-          The GrowEasy CRM CSV Importer is a high-performance, intelligent data mapping engine designed to ingest lead spreadsheets of arbitrary schemas and normalize them into a uniform CRM layout. Using advanced semantic mapping and heuristic validations, the system ensures data cleanliness and consistency before lead ingestion.
+          The FlexCRM CSV Importer is a high-performance, intelligent data mapping engine designed to ingest lead spreadsheets of arbitrary schemas and normalize them into a uniform CRM layout. Using advanced semantic mapping and heuristic validations, the system ensures data cleanliness and consistency before lead ingestion.
         </p>
       </div>
 

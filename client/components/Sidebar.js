@@ -54,8 +54,8 @@ export default function Sidebar({ currentView, onViewChange, currentTheme, onThe
   return (
     <aside className="sidebar">
       <div className="sidebar-logo">
-        <div className="sidebar-logo-icon">GE</div>
-        <span className="sidebar-logo-text">GrowEasy</span>
+        <div className="sidebar-logo-icon">FC</div>
+        <span className="sidebar-logo-text">FlexCRM</span>
       </div>
 
       <nav style={{ flex: 1 }}>
