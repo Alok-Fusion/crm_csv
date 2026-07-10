@@ -23,9 +23,6 @@ export default function AboutView() {
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
           <div>
-            <strong style={{ color: 'var(--text-primary)' }}>Built By:</strong> Alok Kushwaha
-          </div>
-          <div>
             <strong style={{ color: 'var(--text-primary)' }}>System Version:</strong> v1.0.0 (Release build)
           </div>
         </div>

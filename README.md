@@ -240,16 +240,6 @@ crm_csv/
 
 ---
 
-## 👤 Applicant Profile & Assignment Info
-
-- **Candidate**: Alok Kushwaha
-- **Position**: Software Developer (Intern / Full-Time)
-- **Work Mode**: Work From Home (WFH)
-- **Email for Submission**: `varun@flexcrm.ai`
-- **Hosted Application**: [Verify Active Link](https://portfolio-data-omega.vercel.app)
-- **GitHub Repository**: [GitHub Link](https://github.com/Alok-Fusion/crm_csv.git)
-
----
-
 ## 📄 License
 This project is licensed under the MIT License.
+
